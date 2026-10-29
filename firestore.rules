@@ -1,0 +1,116 @@
+rules_version = '2';
+
+// StudentNest Firestore security rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function unchanged(field) {
+      return !(field in request.resource.data) ||
+        (field in resource.data && request.resource.data[field] == resource.data[field]);
+    }
+
+    // Demo seed marker: readable before login so the app can seed on first start.
+    match /meta/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      // Sign-up may only create student/landlord accounts. The demo admin
+      // account (admin@demo.com) bootstraps its own admin profile.
+      allow create: if isAdmin() || signedIn() && request.auth.uid == uid && (
+        request.resource.data.role in ['student', 'landlord'] ||
+        (request.resource.data.role == 'admin' && request.auth.token.email == 'admin@demo.com')
+      );
+      // Users edit their own profile but cannot change role, suspension or
+      // approve their own verification.
+      allow update: if isAdmin() || (
+        signedIn() && request.auth.uid == uid &&
+        unchanged('role') && unchanged('suspended') &&
+        (unchanged('verificationStatus') || request.resource.data.verificationStatus == 'pending')
+      );
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /rooms/{roomId} {
+      allow read: if isAdmin() || (signedIn() && (
+        resource.data.status in ['approved', 'rented'] ||
+        resource.data.landlordId == request.auth.uid));
+      allow create: if isAdmin() || (signedIn() &&
+        request.resource.data.landlordId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.verified == false);
+      // Landlords cannot approve/verify/flag their own listings.
+      allow update: if isAdmin() || (signedIn() &&
+        resource.data.landlordId == request.auth.uid &&
+        unchanged('landlordId') && unchanged('verified') &&
+        unchanged('flagged') && unchanged('flagReason') &&
+        (unchanged('status') ||
+          request.resource.data.status in ['pending', 'rented'] ||
+          (resource.data.status == 'rented' && request.resource.data.status == 'approved')));
+      allow delete: if isAdmin() || (signedIn() && resource.data.landlordId == request.auth.uid);
+    }
+
+    match /conversations/{cid} {
+      allow read: if isAdmin() || (signedIn() &&
+        (resource == null || request.auth.uid in resource.data.participants));
+      allow create: if isAdmin() || (signedIn() && request.auth.uid in request.resource.data.participants);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid in resource.data.participants);
+      allow delete: if isAdmin();
+
+      match /messages/{mid} {
+        function participant() {
+          return request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(cid)).data.participants;
+        }
+        allow read: if isAdmin() || (signedIn() && participant());
+        allow create: if isAdmin() || (signedIn() && participant() &&
+          request.resource.data.senderId == request.auth.uid);
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /reviews/{id} {
+      allow read: if signedIn();
+      allow create: if isAdmin() || (signedIn() && request.resource.data.authorId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /reports/{id} {
+      allow create: if isAdmin() || (signedIn() && request.resource.data.reporterId == request.auth.uid);
+      allow read: if isAdmin() || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /payments/{id} {
+      allow create: if isAdmin() || (signedIn() && request.resource.data.userId == request.auth.uid);
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{id} {
+      // Any signed-in user can notify another (e.g. new chat message).
+      allow create: if signedIn();
+      allow read, update, delete: if isAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /verifications/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if isAdmin() || (signedIn() && request.auth.uid == uid &&
+        request.resource.data.status == 'pending');
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+  }
+}

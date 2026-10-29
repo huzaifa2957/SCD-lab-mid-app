@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "829695331147",
+    "project_id": "studentnest-b0b3a",
+    "storage_bucket": "studentnest-b0b3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:829695331147:android:08c88e5234b0b1cf3c76ce",
+        "android_client_info": {
+          "package_name": "com.studentnest.studentnest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBc24wBCe3z04dbpbjl-JMACE1IpauzYro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

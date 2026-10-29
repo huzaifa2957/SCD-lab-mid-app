@@ -1,0 +1,26 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "studentnest-b0b3a",
+          "appId": "1:829695331147:android:08c88e5234b0b1cf3c76ce",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "studentnest-b0b3a",
+          "configurations": {
+            "android": "1:829695331147:android:08c88e5234b0b1cf3c76ce",
+            "web": "1:829695331147:web:8902778c2787a3a83c76ce"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
